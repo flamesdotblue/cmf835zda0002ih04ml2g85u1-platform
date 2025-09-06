@@ -1,28 +1,46 @@
-import { useState } from 'react'
+import { useState, useCallback } from 'react';
+import HeroCover from './components/HeroCover';
+import GameCanvas from './components/GameCanvas';
+import HUD from './components/HUD';
+import ControlsHelp from './components/ControlsHelp';
 
-function App() {
-  const [count, setCount] = useState(0)
+export default function App() {
+  const [gameState, setGameState] = useState({
+    score: 0,
+    coins: 0,
+    lives: 3,
+    time: 0,
+    status: 'ready',
+  });
+
+  const handleStateChange = useCallback((s) => {
+    setGameState((prev) => ({ ...prev, ...s }));
+  }, []);
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-purple-50 to-blue-50 flex items-center justify-center">
-      <div className="bg-white p-8 rounded-lg shadow-lg">
-        <h1 className="text-3xl font-bold text-gray-800 mb-4">
-          Vibe Coding Platform
-        </h1>
-        <p className="text-gray-600 mb-6">
-          Your AI-powered development environment
-        </p>
-        <div className="text-center">
-          <button
-            onClick={() => setCount(count + 1)}
-            className="bg-blue-500 hover:bg-blue-600 text-white font-semibold py-2 px-4 rounded"
-          >
-            Count is {count}
-          </button>
-        </div>
-      </div>
-    </div>
-  )
-}
+    <div className="min-h-screen bg-neutral-950 text-white font-inter">
+      <HeroCover />
 
-export default App
+      <main id="game" className="relative z-10 mx-auto max-w-6xl px-4 sm:px-6 md:px-8 py-10">
+        <section className="mb-6">
+          <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold tracking-tight">2D Pixel Platformer</h2>
+          <p className="text-neutral-300 mt-2 max-w-2xl">
+            Run, jump, and collect coins. Avoid enemies and don’t fall! Built with React + Canvas.
+          </p>
+        </section>
+
+        <HUD {...gameState} />
+
+        <section className="mt-4">
+          <GameCanvas onStateChange={handleStateChange} />
+        </section>
+
+        <ControlsHelp className="mt-8" />
+      </main>
+
+      <footer className="relative z-10 border-t border-white/10 py-6 text-center text-neutral-400">
+        <p>Made for fun. All product names, logos, and brands are property of their respective owners.</p>
+      </footer>
+    </div>
+  );
+}
