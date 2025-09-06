@@ -2,7 +2,7 @@ import Spline from '@splinetool/react-spline';
 
 export default function HeroCover() {
   return (
-    <section className="relative h-[70vh] w-full overflow-hidden">
+    <section className="relative h-[60vh] w-full overflow-hidden">
       <div className="absolute inset-0">
         <Spline
           scene="https://prod.spline.design/EFlEghJH3qCmzyRi/scene.splinecode"

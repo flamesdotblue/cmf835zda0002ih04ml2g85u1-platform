@@ -56,7 +56,7 @@ export default function GameCanvas({ onStateChange }) {
       });
 
     // Game world
-    const scale = 2; // pixel scale for drawing
+    const scale = 2; // pixel scale
     const G = 0.5 * scale; // gravity
     const FRICTION = 0.8;
     const MAX_VX = 3.0 * scale;
@@ -73,7 +73,7 @@ export default function GameCanvas({ onStateChange }) {
 
     const player = {
       x: 60,
-      y: world.groundY - 32,
+      y: world.groundY - 28,
       w: 20,
       h: 28,
       vx: 0,
@@ -101,8 +101,8 @@ export default function GameCanvas({ onStateChange }) {
     ];
 
     const enemies = [
-      { x: 520, y: world.groundY - 20, w: 20, h: 18, vx: 1.2 * scale, left: 480, right: 720 },
-      { x: 260, y: world.groundY - 212, w: 20, h: 18, vx: 1.4 * scale, left: 240, right: 360 },
+      { x: 520, y: world.groundY, w: 20, h: 18, vx: 1.2 * scale, left: 480, right: 720 },
+      { x: 260, y: world.groundY - 194, w: 20, h: 18, vx: 1.4 * scale, left: 240, right: 360 },
     ];
 
     const keys = { left: false, right: false, up: false, reset: false, pause: false };
@@ -214,7 +214,7 @@ export default function GameCanvas({ onStateChange }) {
 
       // Platform collisions (simple resolution from top)
       for (const p of platforms) {
-        const prevY = player.y - player.vy; // approximate previous position
+        const prevY = player.y - player.vy;
         const onTopPreviously = prevY + player.h <= p.y;
         if (
           player.x + player.w > p.x &&
@@ -243,11 +243,11 @@ export default function GameCanvas({ onStateChange }) {
         }
       }
 
-      // Enemies update and collisions
+      // Enemies update and collisions (shroom positioned by feet)
       for (const e of enemies) {
         e.x += e.vx;
         if (e.x < e.left || e.x + e.w > e.right) e.vx *= -1;
-        const enemyBox = { x: e.x, y: e.y - e.h, w: e.w, h: e.h }; // shroom positioned by feet
+        const enemyBox = { x: e.x, y: e.y - e.h, w: e.w, h: e.h };
         const playerBox = { x: player.x, y: player.y, w: player.w, h: player.h };
         if (aabb(playerBox, enemyBox)) {
           const now = performance.now();
