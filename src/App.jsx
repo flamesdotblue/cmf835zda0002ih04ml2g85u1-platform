@@ -3,6 +3,7 @@ import HeroCover from './components/HeroCover';
 import GameCanvas from './components/GameCanvas';
 import HUD from './components/HUD';
 import ControlsHelp from './components/ControlsHelp';
+import SpriteCredits from './components/SpriteCredits';
 
 export default function App() {
   const [gameState, setGameState] = useState({
@@ -25,7 +26,7 @@ export default function App() {
         <section className="mb-6">
           <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold tracking-tight">2D Pixel Platformer</h2>
           <p className="text-neutral-300 mt-2 max-w-2xl">
-            Run, jump, and collect coins. Avoid enemies and don’t fall! Built with React + Canvas.
+            Run, jump, and collect coins. Avoid enemies and don’t fall! Built with React + Canvas with custom SVG sprites.
           </p>
         </section>
 
@@ -36,6 +37,7 @@ export default function App() {
         </section>
 
         <ControlsHelp className="mt-8" />
+        <SpriteCredits />
       </main>
 
       <footer className="relative z-10 border-t border-white/10 py-6 text-center text-neutral-400">

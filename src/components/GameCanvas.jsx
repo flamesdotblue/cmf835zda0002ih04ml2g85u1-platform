@@ -1,4 +1,7 @@
 import { useEffect, useRef } from 'react';
+import playerURL from '../assets/player.svg?url';
+import coinURL from '../assets/coin.svg?url';
+import shroomURL from '../assets/enemy-shroom.svg?url';
 
 export default function GameCanvas({ onStateChange }) {
   const canvasRef = useRef(null);
@@ -29,6 +32,29 @@ export default function GameCanvas({ onStateChange }) {
     resize();
     window.addEventListener('resize', resize);
 
+    // Load sprites
+    const sprites = { player: null, coin: null, shroom: null };
+    function load(url) {
+      return new Promise((resolve, reject) => {
+        const img = new Image();
+        img.onload = () => resolve(img);
+        img.onerror = reject;
+        img.src = url;
+      });
+    }
+
+    let assetsReady = false;
+    Promise.all([load(playerURL), load(coinURL), load(shroomURL)])
+      .then(([p, c, s]) => {
+        sprites.player = p;
+        sprites.coin = c;
+        sprites.shroom = s;
+        assetsReady = true;
+      })
+      .catch(() => {
+        assetsReady = false; // fallback to shapes
+      });
+
     // Game world
     const scale = 2; // pixel scale for drawing
     const G = 0.5 * scale; // gravity
@@ -48,8 +74,8 @@ export default function GameCanvas({ onStateChange }) {
     const player = {
       x: 60,
       y: world.groundY - 32,
-      w: 16,
-      h: 24,
+      w: 20,
+      h: 28,
       vx: 0,
       vy: 0,
       onGround: false,
@@ -68,15 +94,15 @@ export default function GameCanvas({ onStateChange }) {
     ];
 
     const coins = [
-      { x: 150, y: world.groundY - 96, r: 6, taken: false },
-      { x: 360, y: world.groundY - 156, r: 6, taken: false },
-      { x: 560, y: world.groundY - 216, r: 6, taken: false },
-      { x: 710, y: world.groundY - 106, r: 6, taken: false },
+      { x: 150, y: world.groundY - 100, r: 6, taken: false },
+      { x: 360, y: world.groundY - 160, r: 6, taken: false },
+      { x: 560, y: world.groundY - 220, r: 6, taken: false },
+      { x: 710, y: world.groundY - 110, r: 6, taken: false },
     ];
 
     const enemies = [
-      { x: 520, y: world.groundY - 212, w: 16, h: 16, vx: 1.2 * scale, left: 520, right: 660 },
-      { x: 260, y: world.groundY - 24, w: 18, h: 18, vx: 1.5 * scale, left: 220, right: 400 },
+      { x: 520, y: world.groundY - 20, w: 20, h: 18, vx: 1.2 * scale, left: 480, right: 720 },
+      { x: 260, y: world.groundY - 212, w: 20, h: 18, vx: 1.4 * scale, left: 240, right: 360 },
     ];
 
     const keys = { left: false, right: false, up: false, reset: false, pause: false };
@@ -122,7 +148,7 @@ export default function GameCanvas({ onStateChange }) {
 
     function reset(full = false) {
       player.x = 60;
-      player.y = world.groundY - 32;
+      player.y = world.groundY - player.h;
       player.vx = 0;
       player.vy = 0;
       player.onGround = false;
@@ -135,6 +161,7 @@ export default function GameCanvas({ onStateChange }) {
         world.startTime = performance.now();
       }
       world.status = 'running';
+      world.paused = false;
     }
 
     reset(true);
@@ -220,20 +247,19 @@ export default function GameCanvas({ onStateChange }) {
       for (const e of enemies) {
         e.x += e.vx;
         if (e.x < e.left || e.x + e.w > e.right) e.vx *= -1;
-        const enemyBox = { x: e.x, y: e.y, w: e.w, h: e.h };
+        const enemyBox = { x: e.x, y: e.y - e.h, w: e.w, h: e.h }; // shroom positioned by feet
         const playerBox = { x: player.x, y: player.y, w: player.w, h: player.h };
         if (aabb(playerBox, enemyBox)) {
           const now = performance.now();
           if (now > player.invulUntil) {
-            // If falling onto enemy, bounce and score; else take damage
-            const fallingOn = player.vy > 0 && player.y + player.h - e.y < 12;
+            const fallingOn = player.vy > 0 && player.y + player.h - enemyBox.y < 12;
             if (fallingOn) {
               player.vy = JUMP_VY * 0.7;
               player.score += 200;
             } else {
               player.lives -= 1;
               player.invulUntil = now + 1500;
-              player.x = Math.max(20, player.x - 40 * player.facing);
+              player.x = Math.max(20, Math.min(world.width - player.w - 20, player.x - 40 * player.facing));
               if (player.lives <= 0) {
                 world.status = 'game over';
                 world.paused = true;
@@ -275,18 +301,9 @@ export default function GameCanvas({ onStateChange }) {
       ctx.fillStyle = grad;
       ctx.fillRect(0, 0, logical.w, logical.h);
 
-      // Background mountains (parallax)
-      ctx.fillStyle = '#1a2a4a';
-      ctx.fillRect(0, world.groundY - 100, logical.w, 100);
-
-      // Ground
-      ctx.fillStyle = '#2a7b3f';
-      ctx.fillRect(0, world.groundY, logical.w, logical.h - world.groundY);
-      // Dirt edge
-      ctx.fillStyle = '#1f5c2f';
-      for (let x = 0; x < logical.w; x += 16) {
-        ctx.fillRect(x, world.groundY - 4, 12, 4);
-      }
+      // Background ridge
+      ctx.fillStyle = '#14213d';
+      ctx.fillRect(0, world.groundY - 90, logical.w, 90);
 
       // Platforms
       for (const p of platforms) {
@@ -294,32 +311,42 @@ export default function GameCanvas({ onStateChange }) {
         ctx.fillRect(p.x, p.y, p.w, p.h);
         ctx.fillStyle = '#6e380e';
         ctx.fillRect(p.x, p.y + p.h - 4, p.w, 4);
-        // Grass top
         ctx.fillStyle = '#3aa84b';
         ctx.fillRect(p.x, p.y - 4, p.w, 4);
+      }
+
+      // Ground
+      ctx.fillStyle = '#2a7b3f';
+      ctx.fillRect(0, world.groundY, logical.w, logical.h - world.groundY);
+      ctx.fillStyle = '#1f5c2f';
+      for (let x = 0; x < logical.w; x += 16) {
+        ctx.fillRect(x, world.groundY - 4, 12, 4);
       }
 
       // Coins
       for (const c of coins) {
         if (c.taken) continue;
-        ctx.fillStyle = '#f6c945';
-        ctx.beginPath();
-        ctx.arc(c.x, c.y, c.r, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.fillStyle = '#fff5b0';
-        ctx.fillRect(c.x - 1, c.y - c.r + 2, 2, c.r * 2 - 4);
+        if (assetsReady && sprites.coin) {
+          const size = 16;
+          ctx.drawImage(sprites.coin, Math.round(c.x - size / 2), Math.round(c.y - size / 2), size, size);
+        } else {
+          ctx.fillStyle = '#f6c945';
+          ctx.beginPath();
+          ctx.arc(c.x, c.y, c.r, 0, Math.PI * 2);
+          ctx.fill();
+        }
       }
 
-      // Enemies
+      // Enemies (shroom)
       for (const e of enemies) {
-        ctx.save();
-        ctx.translate(e.x, e.y);
-        ctx.fillStyle = '#d64545';
-        ctx.fillRect(0, 0, e.w, e.h);
-        ctx.fillStyle = '#ffffff';
-        ctx.fillRect(3, 4, 4, 4);
-        ctx.fillRect(e.w - 7, 4, 4, 4);
-        ctx.restore();
+        const drawX = Math.round(e.x);
+        const drawY = Math.round(e.y - e.h);
+        if (assetsReady && sprites.shroom) {
+          ctx.drawImage(sprites.shroom, drawX, drawY, e.w, e.h);
+        } else {
+          ctx.fillStyle = '#d64545';
+          ctx.fillRect(drawX, drawY, e.w, e.h);
+        }
       }
 
       // Player
@@ -327,18 +354,22 @@ export default function GameCanvas({ onStateChange }) {
       ctx.translate(Math.floor(player.x), Math.floor(player.y));
       const invul = performance.now() < player.invulUntil;
       ctx.globalAlpha = invul ? 0.6 : 1;
-      // Body
-      ctx.fillStyle = '#ff3b30';
-      ctx.fillRect(0, 0, player.w, player.h);
-      // Hat
-      ctx.fillStyle = '#b21d18';
-      ctx.fillRect(0, -6, player.w, 6);
-      // Eyes
-      ctx.fillStyle = '#ffffff';
-      if (player.facing === 1) {
-        ctx.fillRect(player.w - 6, 6, 4, 4);
+      if (assetsReady && sprites.player) {
+        ctx.save();
+        if (player.facing === -1) {
+          ctx.translate(player.w, 0);
+          ctx.scale(-1, 1);
+        }
+        ctx.drawImage(sprites.player, 0, -2, player.w, player.h + 2);
+        ctx.restore();
       } else {
-        ctx.fillRect(2, 6, 4, 4);
+        ctx.fillStyle = '#ff3b30';
+        ctx.fillRect(0, 0, player.w, player.h);
+        ctx.fillStyle = '#b21d18';
+        ctx.fillRect(0, -6, player.w, 6);
+        ctx.fillStyle = '#ffffff';
+        if (player.facing === 1) ctx.fillRect(player.w - 6, 6, 4, 4);
+        else ctx.fillRect(2, 6, 4, 4);
       }
       ctx.restore();
 
@@ -357,8 +388,6 @@ export default function GameCanvas({ onStateChange }) {
     function loop() {
       // input edges
       if (keys.reset) {
-        world.paused = false;
-        world.status = 'running';
         reset(true);
         keys.reset = false;
       }
@@ -393,9 +422,7 @@ export default function GameCanvas({ onStateChange }) {
           style={{ imageRendering: 'pixelated' }}
         />
       </div>
-      <div className="text-sm text-neutral-400">
-        Press P to pause • Press R to restart
-      </div>
+      <div className="text-sm text-neutral-400">Press P to pause • Press R to restart</div>
     </div>
   );
 }
